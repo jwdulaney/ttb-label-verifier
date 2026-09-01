@@ -1,24 +1,38 @@
-# AI-Powered Alcohol Label Verification App (TTB POC)
+# AI-Powered Alcohol Label Verification Tool (TTB POC)
 
-## Project Overview
-A proof-of-concept application designed to assist Compliance Division agents in verifying alcohol label applications. This tool uses AI-powered vision and text-matching to automate routine verification tasks (like checking Brand Name, ABV, and strict Government Warning formatting) to reduce processing time from 5-10 minutes to under 5 seconds.
+A proof-of-concept compliance application designed for the Alcohol and Tobacco Tax and Trade Bureau (TTB) Compliance Division to automate routine label field verification and reduce review times from minutes to under 5 seconds.
 
-## Architecture
-This is a monorepo containing:
-- **Backend**: Python / FastAPI (Handles image processing, AI/OCR extraction, and fuzzy matching)
-- **Frontend**: Next.js / Tailwind CSS (Provides an accessible, side-by-side verification UI for agents)
+## 🚀 Key Requirements Addressed
 
-## Key Features
-- **Sub-5 Second Processing**: Optimized AI extraction for rapid label processing.
-- **Strict Compliance Checking**: Exact string matching for the mandatory Government Health Warning, including formatting rules (e.g., all-caps, bold).
-- **Fuzzy Matching**: Intelligent matching for fields like Brand Name (e.g., "STONE'S THROW" vs "Stone's Throw").
-- **Batch Processing**: (WIP) Support for bulk label application verification.
+- **Sub-5 Second Latency Target**: Uses lightweight multimodal Vision AI (Google Gemini 2.5 Flash / GPT-4o-mini) to extract and grade compliance fields in ~1.5–3 seconds.
+- **Strict Government Warning Rules**: Enforces exact string matching and checks for mandatory uppercase formatting (`GOVERNMENT WARNING:`).
+- **Fuzzy Text Matching**: Implements `rapidfuzz` string similarity to prevent false rejections on minor stylistic variations (e.g., "STONE'S THROW" vs "Stone's Throw").
+- **Agent Accessibility**: Built with high contrast, large text, and clear visual pass/fail/review statuses designed for agents of varying technical comfort levels.
+- **Batch Application Verification**: API support for bulk label application checks.
 
-## Prerequisites
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 14, React, Tailwind CSS, TypeScript
+- **Backend**: Python 3.10+, FastAPI, RapidFuzz, Pydantic
+- **AI/Vision Engine**: Google Gemini API (`gemini-2.5-flash`) / OpenAI API (`gpt-4o-mini`)
+
+## 📦 Local Setup Instructions
+
+### Prerequisites
 - Node.js (v18+)
-- Python (3.10+)
-- OpenAI API Key (or chosen Vision API provider)
+- Python (v3.10+)
+- Gemini or OpenAI API Key
 
-## Setup Instructions
+### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-*(Setup instructions will go here once the backend and frontend are scaffolded)*
+# Create .env file with your API key
+echo "GEMINI_API_KEY=your_key_here" > .env
+
+# Run FastAPI server
+uvicorn main:app --reload --port 8000
+```
