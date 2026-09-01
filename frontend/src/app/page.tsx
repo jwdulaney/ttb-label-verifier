@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface VerificationResult {
   overall_status: string;
   government_warning_pass: boolean;
@@ -70,7 +72,7 @@ export default function Home() {
     formData.append('application_json', JSON.stringify(appData));
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify', {
+      const response = await fetch(`${API_BASE_URL}/api/verify`, {
         method: 'POST',
         body: formData,
       });
@@ -106,7 +108,7 @@ export default function Home() {
     formData.append('application_json', JSON.stringify(appData));
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify-batch', {
+      const response = await fetch(`${API_BASE_URL}/api/verify-batch`, {
         method: 'POST',
         body: formData,
       });
