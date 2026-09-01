@@ -1,38 +1,66 @@
 # AI-Powered Alcohol Label Verification Tool (TTB POC)
 
-A proof-of-concept compliance application designed for the Alcohol and Tobacco Tax and Trade Bureau (TTB) Compliance Division to automate routine label field verification and reduce review times from minutes to under 5 seconds.
+A proof-of-concept compliance application built for the Alcohol and Tobacco Tax and Trade Bureau (TTB) to accelerate routine label verification for agents reviewing alcohol labeling submissions.
 
-## 🚀 Key Requirements Addressed
+This tool helps review brands, class/type, alcohol content, net contents, and government warning compliance using AI-assisted extraction and fuzzy validation.
 
-- **Sub-5 Second Latency Target**: Uses lightweight multimodal Vision AI (Google Gemini 2.5 Flash / GPT-4o-mini) to extract and grade compliance fields in ~1.5–3 seconds.
-- **Strict Government Warning Rules**: Enforces exact string matching and checks for mandatory uppercase formatting (`GOVERNMENT WARNING:`).
-- **Fuzzy Text Matching**: Implements `rapidfuzz` string similarity to prevent false rejections on minor stylistic variations (e.g., "STONE'S THROW" vs "Stone's Throw").
-- **Agent Accessibility**: Built with high contrast, large text, and clear visual pass/fail/review statuses designed for agents of varying technical comfort levels.
-- **Batch Application Verification**: API support for bulk label application checks.
+## What this app does
 
-## 🛠 Tech Stack
+- Extracts key label data from uploaded label artwork
+- Compares extracted values against submitted application data
+- Checks the required government warning statement and uppercase formatting rule
+- Uses fuzzy matching to reduce false rejections caused by minor text differences
+- Supports both single-label and batch verification workflows
 
-- **Frontend**: Next.js 14, React, Tailwind CSS, TypeScript
-- **Backend**: Python 3.10+, FastAPI, RapidFuzz, Pydantic
-- **AI/Vision Engine**: Google Gemini API (`gemini-2.5-flash`) / OpenAI API (`gpt-4o-mini`)
+## Tech stack
 
-## 📦 Local Setup Instructions
+- Frontend: Next.js, React, TypeScript, Tailwind CSS
+- Backend: Python, FastAPI, Pydantic, RapidFuzz
+- AI: Google Gemini 2.5 Flash (with a local fallback dataset if no key is configured)
+
+## Local setup
 
 ### Prerequisites
-- Node.js (v18+)
-- Python (v3.10+)
-- Gemini or OpenAI API Key
 
-### 1. Backend Setup
+- Node.js 18+
+- Python 3.10+
+- A Gemini API key
+
+### Backend
+
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Create .env file with your API key
-echo "GEMINI_API_KEY=your_key_here" > .env
+Create a `.env` file in the backend directory:
 
-# Run FastAPI server
+```env
+GEMINI_API_KEY=your_key_here
+```
+
+Then start the API:
+
+```bash
 uvicorn main:app --reload --port 8000
 ```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+
+- http://localhost:3000
+
+## Notes
+
+- The app is designed as a local proof-of-concept and is meant to be run in a development environment.
+- If no API key is configured, the backend uses a fallback sample dataset so the UI can still be demonstrated.
+- The current version focuses on agent usability, quick review workflows, and compliance-check logic rather than production-grade OCR or TTB regulatory automation.
