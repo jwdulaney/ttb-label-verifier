@@ -68,6 +68,54 @@ Open:
 
 ## Notes
 
-- The app is designed as a local proof-of-concept and is meant to be run in a development environment.
-- If no API key is configured, the backend uses a fallback sample dataset so the UI can still be demonstrated.
+- The app is deployed to production (Vercel frontend + Render backend) and accessible via the live URLs above.
+- For local development, it's designed as a proof-of-concept to be run in a development environment.
+- If no Gemini API key is configured, the backend uses a fallback sample dataset so the UI can still be demonstrated.
 - The current version focuses on agent usability, quick review workflows, and compliance-check logic rather than production-grade OCR or TTB regulatory automation.
+
+## Environment Variables
+
+### Backend (Render)
+- `GEMINI_API_KEY` - Google Gemini API key for label text extraction
+
+### Frontend (Vercel)
+- `NEXT_PUBLIC_API_URL` - Backend API URL (defaults to `https://ttb-label-verifier-jd.onrender.com`)
+
+## API Endpoints
+
+### Health & Status
+- `GET /` - Service status
+- `GET /health` - API health check
+
+### Verification Endpoints
+- `POST /api/verify` - Single label verification
+  - **Request**: Multipart form with `file` (image) and `application_json` (COLA data)
+  - **Response**: Verification results with field scores and warning compliance status
+  
+- `POST /api/verify-batch` - Batch label verification
+  - **Request**: Multipart form with multiple `files` and `application_json`
+  - **Response**: Array of verification results with processing time
+
+### Interactive Documentation
+- `GET /docs` - Swagger UI (available at backend URL)
+
+## Project Structure
+
+```
+ttb-label-verifier/
+├── backend/
+│   ├── main.py              # FastAPI application with verification logic
+│   ├── requirements.txt      # Python dependencies
+│   └── .env                  # Local environment (not tracked)
+├── frontend/
+│   ├── src/app/page.tsx     # Main React component
+│   └── package.json         # Node dependencies
+├── README.md
+└── .gitignore               # Excludes .env and build artifacts
+```
+
+## Security Notes
+
+- The `.env` file is never committed to Git (see `.gitignore`)
+- All API keys are stored as environment variables on the deployment platforms
+- CORS is configured to allow cross-origin requests from deployed frontend
