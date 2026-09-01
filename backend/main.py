@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from fastapi import FastAPI, UploadFile, File, Form, Response
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import fuzz
 from pydantic import BaseModel
@@ -19,9 +19,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 STANDARD_WARNING = (
@@ -55,7 +54,7 @@ class VerificationResponse(BaseModel):
     field_results: List[FieldResult]
 
 
-def extract_with_gemini(image_bytes: bytes) -> dict:
+def extract_with_gemini(image_bytes: bytes, mime_type: str) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {
@@ -64,45 +63,57 @@ def extract_with_gemini(image_bytes: bytes) -> dict:
             "alcohol_content": "45% Alc./Vol. (90 Proof)",
             "net_contents": "750 mL",
             "warning_text": STANDARD_WARNING,
-            "warning_header_is_uppercase": True,
+            "warning_header_is_uppercase": True
         }
 
-    client = genai.Client(api_key=api_key)
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = """
+        Extract TTB compliance data from this alcohol label. Return ONLY valid JSON:
+        {
+          "brand_name": string or null,
+          "class_type": string or null,
+          "alcohol_content": string or null,
+          "net_contents": string or null,
+          "warning_text": full verbatim text of government health warning or null,
+          "warning_header_is_uppercase": boolean (true if GOVERNMENT WARNING: is uppercase)
+        }
+        """
 
-    prompt = """
-    Extract TTB compliance data from this alcohol label. Return ONLY valid JSON:
-    {
-      "brand_name": string or null,
-      "class_type": string or null,
-      "alcohol_content": string or null,
-      "net_contents": string or null,
-      "warning_text": full verbatim text of government health warning or null,
-      "warning_header_is_uppercase": boolean (true if GOVERNMENT WARNING: is uppercase)
-    }
-    """
+        effective_mime = mime_type if mime_type in ["image/jpeg", "image/png", "image/webp"] else "image/jpeg"
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[
-            types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
-            prompt,
-        ],
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                types.Part.from_bytes(data=image_bytes, mime_type=effective_mime),
+                prompt
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
 
-    return json.loads(response.text)
+        text = response.text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1]) if lines[-1].startswith("`") else "\n".join(lines[1:])
+        
+        return json.loads(text)
+
+    except Exception as e:
+        print(f"Gemini Extraction Exception: {e}")
+        return {
+            "brand_name": None,
+            "class_type": None,
+            "alcohol_content": None,
+            "net_contents": None,
+            "warning_text": None,
+            "warning_header_is_uppercase": False
+        }
 
 
 def check_field(name: str, expected: str, extracted: Optional[str]) -> FieldResult:
     if not extracted:
-        return FieldResult(
-            field_name=name,
-            expected=expected,
-            extracted=None,
-            match_score=0,
-            status="FAIL",
-        )
-
+        return FieldResult(field_name=name, expected=expected, extracted=None, match_score=0, status="FAIL")
+    
     score = fuzz.ratio(expected.lower().strip(), extracted.lower().strip())
     status = "PASS" if score >= 90 else ("NEEDS_REVIEW" if score >= 70 else "FAIL")
 
@@ -111,7 +122,7 @@ def check_field(name: str, expected: str, extracted: Optional[str]) -> FieldResu
         expected=expected,
         extracted=extracted,
         match_score=round(score, 1),
-        status=status,
+        status=status
     )
 
 
@@ -128,52 +139,56 @@ def health_check():
 @app.post("/api/verify", response_model=VerificationResponse)
 async def verify_label(
     file: UploadFile = File(...),
-    application_json: str = Form(...),
+    application_json: str = Form(...)
 ):
     start_time = time.time()
-    app_data = ApplicationData(**json.loads(application_json))
-    image_bytes = await file.read()
+    try:
+        app_data = ApplicationData(**json.loads(application_json))
+        image_bytes = await file.read()
 
-    extracted = extract_with_gemini(image_bytes)
+        extracted = extract_with_gemini(image_bytes, file.content_type or "image/jpeg")
 
-    warning_raw = extracted.get("warning_text") or ""
-    is_caps = extracted.get("warning_header_is_uppercase", False)
+        warning_raw = extracted.get("warning_text") or ""
+        is_caps = extracted.get("warning_header_is_uppercase", False)
+        
+        warning_clean = " ".join(warning_raw.split()).lower()
+        standard_clean = " ".join(STANDARD_WARNING.split()).lower()
+        warning_similarity = fuzz.ratio(warning_clean, standard_clean)
 
-    warning_clean = " ".join(warning_raw.split()).lower()
-    standard_clean = " ".join(STANDARD_WARNING.split()).lower()
-    warning_similarity = fuzz.ratio(warning_clean, standard_clean)
+        if not warning_raw:
+            warning_pass = False
+            warning_notes = "Government warning statement missing or unreadable."
+        elif not is_caps:
+            warning_pass = False
+            warning_notes = "HEADER FAIL: 'GOVERNMENT WARNING:' must be in all uppercase."
+        elif warning_similarity < 90:
+            warning_pass = False
+            warning_notes = f"TEXT FAIL: Warning text mismatch ({warning_similarity}% match)."
+        else:
+            warning_pass = True
+            warning_notes = "Meets all TTB warning statement requirements."
 
-    if not warning_raw:
-        warning_pass = False
-        warning_notes = "Government warning statement missing."
-    elif not is_caps:
-        warning_pass = False
-        warning_notes = "HEADER FAIL: 'GOVERNMENT WARNING:' must be in all uppercase."
-    elif warning_similarity < 90:
-        warning_pass = False
-        warning_notes = f"TEXT FAIL: Warning text mismatch ({warning_similarity}% match)."
-    else:
-        warning_pass = True
-        warning_notes = "Meets all TTB warning statement requirements."
+        results = [
+            check_field("Brand Name", app_data.brand_name, extracted.get("brand_name")),
+            check_field("Class/Type", app_data.class_type, extracted.get("class_type")),
+            check_field("Alcohol Content", app_data.alcohol_content, extracted.get("alcohol_content")),
+            check_field("Net Contents", app_data.net_contents, extracted.get("net_contents")),
+        ]
 
-    results = [
-        check_field("Brand Name", app_data.brand_name, extracted.get("brand_name")),
-        check_field("Class/Type", app_data.class_type, extracted.get("class_type")),
-        check_field("Alcohol Content", app_data.alcohol_content, extracted.get("alcohol_content")),
-        check_field("Net Contents", app_data.net_contents, extracted.get("net_contents")),
-    ]
+        has_fail = not warning_pass or any(r.status == "FAIL" for r in results)
+        has_review = any(r.status == "NEEDS_REVIEW" for r in results)
+        overall_status = "FAIL" if has_fail else ("NEEDS_REVIEW" if has_review else "PASS")
 
-    has_fail = not warning_pass or any(r.status == "FAIL" for r in results)
-    has_review = any(r.status == "NEEDS_REVIEW" for r in results)
-    overall_status = "FAIL" if has_fail else ("NEEDS_REVIEW" if has_review else "PASS")
-
-    return VerificationResponse(
-        overall_status=overall_status,
-        processing_time_seconds=round(time.time() - start_time, 2),
-        government_warning_pass=warning_pass,
-        warning_notes=warning_notes,
-        field_results=results,
-    )
+        return VerificationResponse(
+            overall_status=overall_status,
+            processing_time_seconds=round(time.time() - start_time, 2),
+            government_warning_pass=warning_pass,
+            warning_notes=warning_notes,
+            field_results=results
+        )
+    except Exception as err:
+        print(f"Error processing verification request: {err}")
+        raise HTTPException(status_code=400, detail=f"Verification failed: {str(err)}")
 
 
 @app.post("/api/verify-batch")
