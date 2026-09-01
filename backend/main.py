@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import fuzz
 from pydantic import BaseModel
@@ -14,12 +14,14 @@ load_dotenv()
 
 app = FastAPI(title="TTB Label Verification API")
 
+# Explicit CORS configuration for cross-domain requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 STANDARD_WARNING = (
@@ -111,6 +113,11 @@ def check_field(name: str, expected: str, extracted: Optional[str]) -> FieldResu
         match_score=round(score, 1),
         status=status,
     )
+
+
+@app.get("/")
+def root_check():
+    return {"status": "TTB API Service Active"}
 
 
 @app.get("/health")
