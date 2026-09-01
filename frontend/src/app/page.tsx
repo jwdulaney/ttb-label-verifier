@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Configure API base URL for local development or production deployment
+// Default to Render production URL, can be overridden by NEXT_PUBLIC_API_URL env var
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ttb-label-verifier-jd.onrender.com';
 const API_BASE_URL = rawUrl.replace(/\/$/, '');
 
 interface VerificationResult {
@@ -79,14 +81,14 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       setResult(data);
-    } catch (err) {
-      console.error(err);
-      alert('Verification failed. Ensure FastAPI server is running on port 8000.');
+    } catch (err: any) {
+      console.error("Verification Error:", err);
+      alert(`Verification failed: ${err.message || 'Network request failed'}`);
     } finally {
       setLoading(false);
     }
@@ -115,14 +117,14 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       setBatchResult(data);
-    } catch (err) {
-      console.error(err);
-      alert('Batch verification failed. Ensure FastAPI server is running on port 8000.');
+    } catch (err: any) {
+      console.error("Batch Verification Error:", err);
+      alert(`Batch verification failed: ${err.message || 'Network request failed'}`);
     } finally {
       setLoading(false);
     }
