@@ -18,7 +18,7 @@ This tool helps review brands, class/type, alcohol content, net contents, and go
 - Backend: Python, FastAPI, Pydantic, RapidFuzz
 - AI: Google Gemini 2.5 Flash (with a local fallback dataset if no key is configured)
 
-## 🌐 Live Deployments & Endpoints
+## Live Deployments & Endpoints
 
 - **Frontend Application (Vercel)**: [https://ttb-label-verifier-1qd42rhp1-jwdulaney.vercel.app/](https://ttb-label-verifier-1qd42rhp1-jwdulaney.vercel.app/)
 - **Backend API Service (Render)**: [https://ttb-label-verifier-jd.onrender.com](https://ttb-label-verifier-jd.onrender.com)
