@@ -1,38 +1,48 @@
+# .gitignore
+
 # Dependencies
 node_modules/
-*.egg-info/
-__pycache__/
-.Python
-env/
+.pnp
+.pnp.js
 venv/
-
-# Environment variables
+env/
 .env
 .env.local
 .env.*.local
 
-# IDE
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Next.js
+.next/
+out/
+build/
+
+# OS/Editor Files
+.DS_Store
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Build outputs
-dist/
-build/
-*.pyc
-*.pyo
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Cache
-.cache/
-.pytest_cache/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
